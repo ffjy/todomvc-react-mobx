@@ -14,3 +14,24 @@ export function	uuid() {
 
 	return uuid;
 }
+
+export function save(key, val) {
+  if (typeof val !== 'string') {
+    val = JSON.stringify(val);
+  }
+  localStorage.setItem(key, val)
+}
+
+export function get(key) {
+  return JSON.parse(
+    localStorage.getItem(key)
+  );
+}
+
+export function clear() {
+  localStorage.clear();
+}
+
+export function remove(key) {
+  localStorage.removeItem(key);
+}

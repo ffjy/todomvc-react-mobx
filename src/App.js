@@ -1,17 +1,34 @@
 import React, { Component } from 'react';
-import todosStore from './store/todos';
+import TodosStore from './store/todos';
 import classnames from 'classnames';
 import { observer } from 'mobx-react';
-import { observable, extendObservable } from 'mobx';
+import { observable, autorun } from 'mobx';
+import { save, get, uuid } from './utils';
 import DevTools from 'mobx-react-devtools';
+
+const todosStore = TodosStore.fromJs(get('todo-list') || []);
+const disposer = autorun(() => {
+  save('todo-list', todosStore.todos);
+});
 
 @observer
 class Header extends Component {
+  handleKeyUp(e) {
+    if (e.keyCode === 13) {
+      const title = e.target.value.trim();
+      e.target.value = '';
+      todosStore.addTodo({
+        title,
+        completed: false,
+        id: uuid(),
+      });
+    }
+  }
   render() {
     return (
       <header className="header">
         <h1>todos</h1>
-        <input className="new-todo" placeholder="What needs to be done?" autoFocus />
+        <input onKeyUp={this.handleKeyUp.bind(this)} className="new-todo" placeholder="What needs to be done?" autoFocus />
       </header>
     )
   }
@@ -19,22 +36,29 @@ class Header extends Component {
 
 @observer
 class Footer extends Component {
+  renderLink(filter) {
+    return (
+      <a
+        onClick={this.changeLink.bind(this, filter)}
+        className={classnames({'selected': todosStore.todoFilter === filter})}
+      >{filter}</a>
+    )
+  }
+  changeLink(filter) {
+    todosStore.changeFilter(filter)
+  }
+  clearCompleted() {
+    todosStore.clearCompleted();
+  }
   render() {
+    const links = ['all', 'active', 'completed'];
     return (
       <footer className="footer">
-        <span className="todo-count"><strong>0</strong> item left</span>
+        <span className="todo-count"><strong>{todosStore.leftItems}</strong> item left</span>
         <ul className="filters">
-          <li>
-            <a className="selected" href="#/">All</a>
-          </li>
-          <li>
-            <a href="#/active">Active</a>
-          </li>
-          <li>
-            <a href="#/completed">Completed</a>
-          </li>
+          {links.map((filter, index) => <li key={index}>{this.renderLink(filter)}</li>)}
         </ul>
-        <button className="clear-completed">Clear completed</button>
+        <button style={{ display: todosStore.completedNums === 0 ? 'none': '' }} className="clear-completed" onClick={this.clearCompleted.bind(this)}>Clear completed</button>
       </footer>
     )
   }
@@ -52,11 +76,8 @@ const Todos = observer((props) => {
 class Todo extends Component {
   @observable editing = false;
   componentWillMount() {
-    const { todo, index } = this.props;
+    const { index } = this.props;
     this.index = index;
-    extendObservable(this, {
-      ...todo,
-    });
   }
   editTodo() {
     this.editing = true;
@@ -64,8 +85,8 @@ class Todo extends Component {
     this.refs.inputTodo.focus();
   }
   doneEdit(title) {
-    this.title = title;
     this.editing = false;
+    todosStore.editTodo(this.index, title);
   }
   cancelEdit() {
     if (this.title !== this.titleCache) {
@@ -73,7 +94,6 @@ class Todo extends Component {
     }
   }
   toggleChecked(e) {
-    this.completed = !this.completed
     todosStore.toggleComplete(this.index);
   }
   removeTodo(e) {
@@ -93,11 +113,12 @@ class Todo extends Component {
     this.doneEdit(title);
   }
   render() {
+    const { todo } = this.props;
     return (
-      <li className={classnames({ 'completed': this.completed, 'editing': this.editing })}>
+      <li className={classnames({ 'completed': todo.completed, 'editing': this.editing })}>
         <div className="view">
-          <input className="toggle" type="checkbox" checked={this.completed} onChange={this.toggleChecked.bind(this)} />
-          <label onDoubleClick={this.editTodo.bind(this)}>{this.title}</label>
+          <input className="toggle" type="checkbox" checked={todo.completed} onChange={this.toggleChecked.bind(this)} />
+          <label onDoubleClick={this.editTodo.bind(this)}>{todo.title}</label>
           <button className="destroy" onClick={this.removeTodo.bind(this)}></button>
         </div>
         <input 
@@ -105,7 +126,7 @@ class Todo extends Component {
           onKeyUp={this.handleKeyUp.bind(this)}
           onBlur={this.handleBlur.bind(this)} 
           className="edit" 
-          defaultValue={this.title} />
+          defaultValue={todo.title} />
       </li>
     )
   }
@@ -114,19 +135,30 @@ class Todo extends Component {
 @observer
 class App extends Component {
   componentWillUnmount() {
-    
+    disposer();
+  }
+  handleToggle(e) {
+    const toggle = e.target.checked;
+    todosStore.toggleTodos(toggle);
   }
   render() {
     return (
-      <div className="App todoapp">
-        <Header />
-        <section className="main">
-          <input id="toggle-all" className="toggle-all" type="checkbox" />
-          <label htmlFor="toggle-all">Mark all as complete</label>
-          <Todos todos={todosStore.todos}/>
-        </section>
-        <Footer />
-        <DevTools />
+      <div className="App">
+        <div className="todoapp">
+          <Header />
+          <section className="main">
+            <input id="toggle-all" className="toggle-all" type="checkbox" onChange={this.handleToggle.bind(this)}/>
+            <label htmlFor="toggle-all">Mark all as complete</label>
+            <Todos todos={todosStore.todoList}/>
+          </section>
+          <Footer />
+          <DevTools />
+        </div>
+        <footer className="info">
+          <p>Double-click to edit a todo</p>
+          <p>Created by maczyt</p>
+          <p>Part of <a href="http://todomvc.com">TodoMVC</a></p>
+        </footer>
       </div>
     );
   }
