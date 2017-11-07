@@ -5,6 +5,41 @@ import { observer } from 'mobx-react';
 import { observable, extendObservable } from 'mobx';
 import DevTools from 'mobx-react-devtools';
 
+@observer
+class Header extends Component {
+  render() {
+    return (
+      <header className="header">
+        <h1>todos</h1>
+        <input className="new-todo" placeholder="What needs to be done?" autoFocus />
+      </header>
+    )
+  }
+}
+
+@observer
+class Footer extends Component {
+  render() {
+    return (
+      <footer className="footer">
+        <span className="todo-count"><strong>0</strong> item left</span>
+        <ul className="filters">
+          <li>
+            <a className="selected" href="#/">All</a>
+          </li>
+          <li>
+            <a href="#/active">Active</a>
+          </li>
+          <li>
+            <a href="#/completed">Completed</a>
+          </li>
+        </ul>
+        <button className="clear-completed">Clear completed</button>
+      </footer>
+    )
+  }
+}
+
 const Todos = observer((props) => {
   return (
     <ul className="todo-list">
@@ -84,30 +119,13 @@ class App extends Component {
   render() {
     return (
       <div className="App todoapp">
-        <header className="header">
-          <h1>todos</h1>
-          <input className="new-todo" placeholder="What needs to be done?" autoFocus />
-			  </header>
+        <Header />
         <section className="main">
           <input id="toggle-all" className="toggle-all" type="checkbox" />
           <label htmlFor="toggle-all">Mark all as complete</label>
           <Todos todos={todosStore.todos}/>
         </section>
-        <footer className="footer">
-          <span className="todo-count"><strong>0</strong> item left</span>
-          <ul className="filters">
-            <li>
-              <a className="selected" href="#/">All</a>
-            </li>
-            <li>
-              <a href="#/active">Active</a>
-            </li>
-            <li>
-              <a href="#/completed">Completed</a>
-            </li>
-          </ul>
-          <button className="clear-completed">Clear completed</button>
-        </footer>
+        <Footer />
         <DevTools />
       </div>
     );
